@@ -1,0 +1,38 @@
+MIT License
+
+Copyright (c) 2025 Ahmed Haitham Amer
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software for academic and educational purposes only, subject to the following
+conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+ACADEMIC USE RESTRICTIONS:
+
+This software is provided for educational and research purposes only. Commercial
+use, redistribution for commercial purposes, or use in production systems is
+prohibited without explicit written permission from the copyright holders.
+
+DATASET LICENSE:
+
+This project uses the NIH Chest X-ray Dataset, which is free for academic
+research under terms specified by the National Institutes of Health (NIH).
+Users must comply with the original dataset license terms:
+https://www.innovatiana.com/en/datasets/nih-chest-x-rays
+
+For any questions regarding licensing or usage, please contact the course
+instructor or refer to the course materials.
+
