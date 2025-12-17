@@ -1,0 +1,29 @@
+# Data folder (too large for Git)
+data/
+*.zip
+*.tar.gz
+
+# Results folder (can be regenerated)
+results/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
