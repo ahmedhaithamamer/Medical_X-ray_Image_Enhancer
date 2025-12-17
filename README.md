@@ -63,9 +63,7 @@ Medical_X-ray_Image_Enhancement/
 │   ├── enhancement.py # Enhancement functions
 │   ├── metrics.py     # MSE/PSNR calculation
 │   ├── io_utils.py    # Image I/O utilities
-│   ├── streamlit_app.py # Interactive viewer
-│   └── calculate_stats.py # Statistics calculator
-├── report/            # LaTeX report
+│   └── streamlit_app.py # Interactive viewer
 └── requirements.txt   # Dependencies
 ```
 
@@ -145,12 +143,6 @@ Average metrics across 50 images:
 - `src/main.py` - Batch processing pipeline
 - `src/streamlit_app.py` - Interactive web viewer
 - `src/calculate_stats.py` - Statistics calculator
-
-## Report
-
-The LaTeX report is located in `report/main.tex`. To compile:
-- Use [Overleaf](https://www.overleaf.com) (online, no installation)
-- Or install LaTeX locally and run `pdflatex main.tex`
 
 ## License
 
