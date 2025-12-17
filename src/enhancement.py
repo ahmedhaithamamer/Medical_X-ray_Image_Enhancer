@@ -31,19 +31,71 @@ def apply_hist_eq(img: np.ndarray) -> np.ndarray:
 def apply_clahe(img: np.ndarray,
                 clip_limit: float = 2.0,
                 tile_grid_size: tuple[int, int] = (8, 8)) -> np.ndarray:
-    """
-    Apply CLAHE (Contrast Limited Adaptive Histogram Equalization).
-    Useful for medical images where global HE may over-amplify noise.
-    """
-    clahe = cv2.createCLAHE(clipLimit=clip_limit,
-                            tileGridSize=tile_grid_size)
+
+    clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=tile_grid_size)
     return clahe.apply(img)
 
 
+def apply_bilateral_filter(img: np.ndarray, d: int = 9,
+                           sigma_color: float = 75.0,
+                           sigma_space: float = 75.0) -> np.ndarray:
+    """
+    Apply bilateral filtering to reduce noise while preserving edges.
+    
+    Parameters
+    ----------
+    img : np.ndarray
+        Input grayscale image (uint8).
+    d : int
+        Diameter of pixel neighborhood.
+    sigma_color : float
+        Filter sigma in the color space.
+    sigma_space : float
+        Filter sigma in the coordinate space.
+    """
+    return cv2.bilateralFilter(img, d, sigma_color, sigma_space)
+
+
+def apply_unsharp_masking(img: np.ndarray,
+                          sigma: float = 1.0,
+                          strength: float = 1.5,
+                          threshold: int = 0) -> np.ndarray:
+    """
+    Apply unsharp masking for detail enhancement.
+    
+    Parameters
+    ----------
+    img : np.ndarray
+        Input grayscale image (uint8).
+    sigma : float
+        Standard deviation for Gaussian blur.
+    strength : float
+        Strength of the sharpening effect.
+    threshold : int
+        Threshold for edge detection (0 = no threshold).
+    
+    Returns
+    -------
+    np.ndarray
+        Sharpened image.
+    """
+    # Create blurred version
+    blurred = cv2.GaussianBlur(img, (0, 0), sigma)
+    
+    # Create sharpened version
+    sharpened = cv2.addWeighted(img, 1.0 + strength, blurred, -strength, 0)
+    
+    # Apply threshold if specified
+    if threshold > 0:
+        mask = cv2.absdiff(img, blurred) > threshold
+        result = np.where(mask, sharpened, img)
+        return result.astype(np.uint8)
+    
+    return sharpened
+
+
 def apply_sharpen(img: np.ndarray) -> np.ndarray:
-    """
-    Apply a simple sharpening filter using a convolution kernel.
-    """
+    
     kernel = np.array([[0, -1, 0],
                        [-1, 5, -1],
                        [0, -1, 0]], dtype=np.float32)
@@ -52,25 +104,54 @@ def apply_sharpen(img: np.ndarray) -> np.ndarray:
 
 
 def enhancement_pipeline(img: np.ndarray,
-                         use_clahe: bool = False) -> dict[str, np.ndarray]:
+                         use_clahe: bool = False,
+                         use_bilateral: bool = True,
+                         use_unsharp: bool = True) -> dict[str, np.ndarray]:
     """
-    Run a simple enhancement pipeline on a single image.
+    Run a comprehensive enhancement pipeline on a single image.
 
-    Returns a dictionary with intermediate results that can be
-    saved or visualized in the report.
+    Parameters
+    ----------
+    img : np.ndarray
+        Input grayscale image (uint8).
+    use_clahe : bool
+        Use CLAHE instead of global histogram equalization.
+    use_bilateral : bool
+        Include bilateral filtering results.
+    use_unsharp : bool
+        Include unsharp masking results.
+
+    Returns
+    -------
+    dict[str, np.ndarray]
+        Dictionary with all enhancement results.
     """
-    med = apply_median_filter(img, ksize=3)
-    if use_clahe:
-        contrast = apply_clahe(med)
-    else:
-        contrast = apply_hist_eq(med)
-    sharp = apply_sharpen(contrast)
-
-    return {
+    outputs = {
         "original": img,
-        "median": med,
-        "contrast": contrast,
-        "sharpen": sharp,
     }
+    
+    # Noise reduction techniques
+    outputs["median"] = apply_median_filter(img, ksize=3)
+    
+    if use_bilateral:
+        outputs["bilateral"] = apply_bilateral_filter(img, d=9, sigma_color=75.0, sigma_space=75.0)
+    
+    # Use median-filtered image for contrast enhancement (best balance)
+    denoised = outputs["median"]
+    
+    # Contrast enhancement - always compute both for comparison
+    outputs["contrast"] = apply_hist_eq(denoised)
+    outputs["clahe"] = apply_clahe(denoised)
+    
+    # Use the selected contrast method for detail enhancement
+    contrast_base = outputs["clahe"] if use_clahe else outputs["contrast"]
+    
+    # Detail enhancement
+    outputs["sharpen"] = apply_sharpen(contrast_base)
+    
+    if use_unsharp:
+        outputs["unsharp"] = apply_unsharp_masking(contrast_base, sigma=1.0, strength=1.5)
+    
+    return outputs
 
 

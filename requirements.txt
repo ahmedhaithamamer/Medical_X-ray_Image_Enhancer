@@ -2,5 +2,8 @@ opencv-python
 numpy
 matplotlib
 scikit-image
+streamlit
+pillow
+pandas
 
 

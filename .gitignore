@@ -1,10 +1,10 @@
 # Data folder (too large for Git)
-data/
+# data/
 *.zip
 *.tar.gz
-
+report/
 # Results folder (can be regenerated)
-results/
+# results/
 
 # Python
 __pycache__/
@@ -27,3 +27,5 @@ ENV/
 .DS_Store
 Thumbs.db
 
+# calculate_stats.py
+src/calculate_stats.py
