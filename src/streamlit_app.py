@@ -90,12 +90,13 @@ def main():
         # Enhancement technique selection
         st.subheader("Enhancement Techniques")
         show_original = st.checkbox("Original", value=True)
-        show_median = st.checkbox("Median Filter", value=True)
-        show_bilateral = st.checkbox("Bilateral Filter", value=True)
-        show_contrast = st.checkbox("Histogram Equalization", value=True)
-        show_clahe = st.checkbox("CLAHE", value=True)
-        show_sharpen = st.checkbox("Sharpening", value=True)
-        show_unsharp = st.checkbox("Unsharp Masking", value=True)
+        show_best = st.checkbox("⭐ Best Pipeline", value=True, help="Optimal sequential enhancement: Denoise → Contrast → Sharpen")
+        show_median = st.checkbox("Median Filter", value=False)
+        show_bilateral = st.checkbox("Bilateral Filter", value=False)
+        show_contrast = st.checkbox("Histogram Equalization", value=False)
+        show_clahe = st.checkbox("CLAHE", value=False)
+        show_sharpen = st.checkbox("Sharpening", value=False)
+        show_unsharp = st.checkbox("Unsharp Masking", value=False)
         
         st.divider()
         
@@ -152,7 +153,8 @@ def main():
                 original_img,
                 use_clahe=True,
                 use_bilateral=True,
-                use_unsharp=True
+                use_unsharp=True,
+                include_best_pipeline=True  # Always include best pipeline
             )
     else:
         # Load from results folder (only for dataset images)
@@ -167,25 +169,42 @@ def main():
                 "clahe": "clahe.png",
                 "sharpen": "sharpen.png",
                 "unsharp": "unsharp.png",
+                "best_pipeline": "best_pipeline.png",  # Automatically load best pipeline if available
             }
             
+            loaded_from_disk = []
             for key, filename in enhancement_files.items():
                 filepath = result_dir / filename
                 if filepath.exists():
                     outputs[key] = load_grayscale(str(filepath))
+                    loaded_from_disk.append(key)
+            
+            # Show status if best_pipeline was loaded from disk
+            if "best_pipeline" in loaded_from_disk:
+                st.success(f"✅ Loaded Best Pipeline from saved results")
             
             # If some files are missing, process live for those
-            if len(outputs) < 7:
+            # Expected: original + 6 individual techniques + best_pipeline = 8 total
+            # But some may be optional (bilateral, unsharp), so check for at least core ones
+            core_keys = ["original", "median", "contrast", "clahe", "sharpen"]
+            missing_core = [key for key in core_keys if key not in outputs]
+            
+            if missing_core or "best_pipeline" not in outputs:
                 with st.spinner("Processing missing enhancements..."):
                     temp_outputs = enhancement_pipeline(
                         original_img,
                         use_clahe=True,
                         use_bilateral=True,
-                        use_unsharp=True
+                        use_unsharp=True,
+                        include_best_pipeline=True
                     )
+                    # Add missing outputs, prioritizing best_pipeline
                     for key in temp_outputs:
                         if key not in outputs:
                             outputs[key] = temp_outputs[key]
+                    # Ensure best_pipeline is always included
+                    if "best_pipeline" not in outputs and "best_pipeline" in temp_outputs:
+                        outputs["best_pipeline"] = temp_outputs["best_pipeline"]
         else:
             st.error("No image selected")
             st.stop()
@@ -196,6 +215,7 @@ def main():
     # Technique selection for comparison
     technique_map = {
         "Original": "original",
+        "⭐ Best Pipeline": "best_pipeline",
         "Median Filter": "median",
         "Bilateral Filter": "bilateral",
         "Histogram Equalization": "contrast",
@@ -205,10 +225,19 @@ def main():
     }
     
     # Filter available techniques (excluding Original for "After")
+    # Prioritize Best Pipeline first
     available_after_techniques = []
+    best_pipeline_name = None
     for name, key in technique_map.items():
         if key in outputs and key != "original":
-            available_after_techniques.append(name)
+            if key == "best_pipeline":
+                best_pipeline_name = name
+            else:
+                available_after_techniques.append(name)
+    
+    # Add Best Pipeline at the beginning if available
+    if best_pipeline_name:
+        available_after_techniques.insert(0, best_pipeline_name)
     
     col_a, col_b = st.columns(2)
     
@@ -271,6 +300,7 @@ def main():
     # Filter techniques based on checkboxes
     display_map = {
         "original": (show_original, "Original"),
+        "best_pipeline": (show_best, "⭐ Best Pipeline"),
         "median": (show_median, "Median Filter"),
         "bilateral": (show_bilateral, "Bilateral Filter"),
         "contrast": (show_contrast, "Histogram Equalization"),
@@ -279,16 +309,34 @@ def main():
         "unsharp": (show_unsharp, "Unsharp Masking"),
     }
     
-    # Create grid
-    display_items = [(key, name) for key, (show, name) in display_map.items() 
-                     if show and key in outputs]
+    # Create grid - prioritize best_pipeline and original
+    display_items = []
+    best_item = None
+    original_item = None
     
-    if display_items:
+    for key, (show, name) in display_map.items():
+        if show and key in outputs:
+            if key == "best_pipeline":
+                best_item = (key, name)
+            elif key == "original":
+                original_item = (key, name)
+            else:
+                display_items.append((key, name))
+    
+    # Reorder: original first, then best_pipeline, then others
+    ordered_items = []
+    if original_item:
+        ordered_items.append(original_item)
+    if best_item:
+        ordered_items.append(best_item)
+    ordered_items.extend(display_items)
+    
+    if ordered_items:
         # Create columns dynamically
         n_cols = 3
         cols = st.columns(n_cols)
         
-        for idx, (key, name) in enumerate(display_items):
+        for idx, (key, name) in enumerate(ordered_items):
             col_idx = idx % n_cols
             with cols[col_idx]:
                 st.subheader(name)
@@ -314,12 +362,27 @@ def main():
                 
                 metric_item = {"name": name, "mse": m, "psnr": p}
                 
-                if key in ["median", "bilateral"]:
+                if key == "best_pipeline":
+                    # Best pipeline gets its own category
+                    continue  # Will be shown separately
+                elif key in ["median", "bilateral"]:
                     noise_reduction.append(metric_item)
                 elif key in ["contrast", "clahe"]:
                     contrast_enhancement.append(metric_item)
                 elif key in ["sharpen", "unsharp"]:
                     detail_enhancement.append(metric_item)
+        
+        # Show Best Pipeline metrics separately if available
+        if "best_pipeline" in outputs:
+            st.subheader("⭐ Best Pipeline Result")
+            cols = st.columns(1)
+            with cols[0]:
+                m = mse(outputs["original"], outputs["best_pipeline"])
+                p = psnr(outputs["original"], outputs["best_pipeline"])
+                st.markdown("**⭐ Best Pipeline (Denoise → Contrast → Sharpen)**")
+                st.metric("MSE", f"{m:.2f}")
+                st.metric("PSNR", f"{p:.2f} dB")
+            st.divider()
         
         # Display metrics in organized sections
         if noise_reduction:
@@ -378,6 +441,65 @@ def main():
             mime="application/zip",
             help="Downloads all enhanced images as a ZIP file"
         )
+    
+    # Filter Descriptions Section
+    st.header("📚 Understanding Image Enhancement Techniques")
+    st.markdown("""
+    This section explains what each enhancement technique does to your X-ray images in simple terms.
+    """)
+    
+    with st.expander("🔍 Step 1: Denoising (Cleaning the Image)", expanded=True):
+        st.markdown("""
+        **Purpose:** Remove unwanted noise and graininess from the image while keeping important details.
+        
+        - **Median Filter**: Like taking a photo through a soft-focus lens. It smooths out random spots and speckles 
+          by replacing each pixel with the middle value of its neighbors. Great for removing salt-and-pepper noise.
+        
+        - **Bilateral Filter**: A smart smoothing technique that removes noise but preserves sharp edges and important 
+          details. Think of it as a selective blur that only affects noisy areas, leaving clear structures untouched.
+        """)
+    
+    with st.expander("🌈 Step 2: Contrast Enhancement (Making Details Visible)", expanded=True):
+        st.markdown("""
+        **Purpose:** Improve the visibility of structures by making dark areas darker and bright areas brighter.
+        
+        - **Histogram Equalization**: Spreads out the brightness levels across the entire image, making everything 
+          more visible. It's like adjusting the brightness and contrast of your TV to see details in both dark 
+          and bright scenes. However, it can sometimes over-enhance certain areas.
+        
+        - **CLAHE (Contrast Limited Adaptive Histogram Equalization)**: A smarter version of histogram equalization 
+          that works on small regions of the image instead of the whole image. It prevents over-enhancement and 
+          produces more natural-looking results. Like having multiple brightness controls for different parts of 
+          the image.
+        """)
+    
+    with st.expander("✨ Step 3: Sharpening (Enhancing Details)", expanded=True):
+        st.markdown("""
+        **Purpose:** Make edges and fine details more crisp and clear, improving the visibility of small structures.
+        
+        - **Sharpening (Convolution)**: Uses a mathematical filter to increase the contrast at edges, making them 
+          stand out more. It's like using a sharpening tool in photo editing software to make blurry edges crisp.
+        
+        - **Unsharp Masking**: A sophisticated sharpening technique that enhances edges and details without 
+          over-sharpening. It works by creating a slightly blurred version of the image, then subtracting it from 
+          the original to highlight edges. This produces natural-looking sharpness without artifacts.
+        """)
+    
+    with st.expander("⭐ Best Pipeline (Complete Enhancement)", expanded=True):
+        st.markdown("""
+        **Purpose:** Apply all three steps in the optimal sequence for the best possible result.
+        
+        The **Best Pipeline** combines the most effective techniques from each step:
+        1. **Denoise** using Median Filter (removes noise, preserves edges)
+        2. **Contrast** using CLAHE (enhances visibility naturally)
+        3. **Sharpen** using Unsharp Masking (brings out fine details)
+        
+        This sequential approach ensures that each step builds upon the previous one, resulting in a clean, 
+        well-contrasted, and sharp image that's ideal for medical diagnosis.
+        """)
+    
+    st.markdown("---")
+    st.info("💡 **Tip:** For best results, use the **Best Pipeline** option, which automatically applies all three steps in the optimal order!")
 
 
 if __name__ == "__main__":

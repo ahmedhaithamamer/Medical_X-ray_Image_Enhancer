@@ -81,17 +81,36 @@ The project uses a subset of 30-50 chest X-ray images from the [NIH Chest X-ray 
 
 ## Enhancement Techniques
 
-### Noise Reduction
+### Sequential Pipeline Approach
+
+The project implements a **three-step sequential enhancement pipeline** that applies techniques in the optimal order:
+
+1. **Step 1: Denoise (Clean)** - Remove noise while preserving edges
+2. **Step 2: Contrast (Enhance)** - Improve visibility of structures
+3. **Step 3: Sharpen (Detail)** - Enhance fine details and edges
+
+### Individual Techniques
+
+#### Noise Reduction
 - **Median Filter**: 3×3 kernel, effective for impulse noise
 - **Bilateral Filter**: Edge-preserving with spatial and intensity domain filtering
 
-### Contrast Enhancement
+#### Contrast Enhancement
 - **Histogram Equalization**: Global contrast enhancement
 - **CLAHE**: Adaptive local contrast with clipping limit (clip=2.0, tiles=8×8)
 
-### Detail Enhancement
+#### Detail Enhancement
 - **Sharpening**: 3×3 convolution kernel
 - **Unsharp Masking**: Gaussian blur (σ=1.0) with strength factor 1.5
+
+### Best Pipeline
+
+The **Best Pipeline** combines the optimal techniques from each step:
+- **Denoise**: Median Filter (removes noise, preserves edges)
+- **Contrast**: CLAHE (enhances visibility naturally)
+- **Sharpen**: Unsharp Masking (brings out fine details)
+
+This sequential approach ensures each step builds upon the previous one, resulting in superior enhancement quality compared to applying techniques independently.
 
 ## Evaluation Metrics
 
@@ -114,6 +133,20 @@ The Streamlit app provides:
 - Download enhanced images as ZIP
 
 Launch with: `streamlit run src/streamlit_app.py`
+
+## Problems Solved
+
+### Challenge: Optimal Enhancement Sequence
+
+**Problem**: Applying enhancement techniques independently or in random order can produce suboptimal results. For example, sharpening a noisy image amplifies noise, and enhancing contrast before denoising can make noise more visible.
+
+**Solution**: We implemented a **sequential three-step pipeline** (Denoise → Contrast → Sharpen) that ensures each enhancement step builds optimally upon the previous one:
+
+1. **Denoise First**: Removing noise before contrast enhancement prevents noise amplification
+2. **Contrast Second**: Enhancing contrast after denoising improves visibility without introducing artifacts
+3. **Sharpen Last**: Sharpening the clean, well-contrasted image enhances details without amplifying noise
+
+**Result**: The sequential pipeline (Median → CLAHE → Unsharp) produces superior results compared to independent application of techniques, with better noise suppression, improved contrast, and enhanced detail visibility.
 
 ## Results
 
