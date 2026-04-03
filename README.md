@@ -194,10 +194,5 @@ explicit permission.
 - OpenCV community for image processing libraries
 - Streamlit for the web application framework
 
-## Contact
-
-For questions or issues related to this course project, please contact the course instructor or refer to the course materials.
-
----
 
 **Note**: This project is part of an academic course and is intended for educational purposes only.
